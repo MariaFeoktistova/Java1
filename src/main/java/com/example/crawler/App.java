@@ -3,6 +3,7 @@ package com.example.crawler;
 public class App {
     public static void main(String[] args) {
         System.out.println("News Crawler started!");
+
         String rssUrl = "https://habr.com/ru/rss/articles/";
         String rabbitHost = "rabbitmq";
         String taskQueue = "task_queue";
@@ -11,18 +12,20 @@ public class App {
         int elasticPort = 9200;
         String elasticIndex = "news";
 
-        // 1. Парсим RSS и отправляем задачи
+        // 1. Парсим RSS и отправляем задачи в RabbitMQ
         RssCrawler crawler = new RssCrawler();
         try {
             var articles = crawler.fetchArticles(rssUrl);
             System.out.println("Найдено статей: " + articles.size());
+
             TaskProducer producer = new TaskProducer(rabbitHost, taskQueue);
             for (var article : articles) {
                 producer.sendTask(article.link);
             }
+
             // Создаём очередь для результатов (result_queue)
             TaskProducer resultProducer = new TaskProducer(rabbitHost, resultQueue);
-            resultProducer.sendTask("init"); // Просто чтобы очередь создалась
+            resultProducer.sendTask("init"); // Инициализация очереди
         } catch (Exception e) {
             System.err.println("Ошибка при парсинге RSS или отправке в RabbitMQ: " + e.getMessage());
         }
@@ -41,7 +44,7 @@ public class App {
             System.err.println("Ошибка при запуске воркера: " + e.getMessage());
         }
 
-        // 3. Запускаем ResultConsumer для сохранения в ElasticSearch
+        // 3. Запускаем ResultConsumer для сохранения результатов в Elasticsearch
         try {
             ResultConsumer consumer = new ResultConsumer(rabbitHost, resultQueue);
             consumer.consume();

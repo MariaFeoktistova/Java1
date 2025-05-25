@@ -17,9 +17,11 @@ public class TaskProducer {
     public void sendTask(String message) throws Exception {
         try (Connection connection = factory.newConnection();
              Channel channel = connection.createChannel()) {
+
             channel.queueDeclare(queueName, true, false, false, null);
             channel.basicPublish("", queueName, null, message.getBytes());
             System.out.println("[TaskProducer] Sent: " + message);
         }
     }
 }
+
